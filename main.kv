@@ -1,0 +1,81 @@
+BoxLayout:
+    size:root.size
+    #padding:(0,0,0,300) # padding:(left, top, right, bottom) -- leaving size for the ad to be shown and not covered.
+    InstrumentPage:
+        MDNavigationLayout:
+            MDTopAppBar:
+                title: "Query Menu"
+                elevation: 4
+                pos_hint: {"top": 1}
+                left_action_items:
+                    [['menu', lambda x: nav_drawer.set_state("open")]]
+                right_action_items:
+                    [["dots-vertical", lambda x: app.getMoreAnalysis()]]
+            MDScreenManager:
+                id:rootScreenManager
+            MDNavigationDrawer:
+                id: nav_drawer
+                radius: (0, 16, 16, 0)
+
+                ContentNavigationDrawer:
+                    BoxLayout:
+                        orientation:'vertical'
+                        spacing:50
+                        BoxLayout:
+                            orientation:'vertical'
+                            pos_hint:{'top':1}
+                            size_hint: 1, 0.2
+                            BoxLayout:
+                                orientation: 'vertical'
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    MDLabel:
+                                        size_hint: 0.4, 1
+                                        text: 'RIC:'
+                                    MDTextField:
+                                        id: ric_input
+                                        text:'UPRO'
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    MDLabel:
+                                        size_hint: 0.4, 1
+                                        text: 'Start:'
+                                    MDTextField:
+                                        id: start_date_input
+                                        text:'2023-01-01'
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    MDLabel:
+                                        size_hint: 0.4, 1
+                                        text: 'End:'
+                                    MDTextField:
+                                        id: end_date_input
+                                        text:'2023-02-28'
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    MDRaisedButton:
+                                        text: 'Fetch Data'
+                                        on_release: app.fetch_data()
+
+                        BoxLayout:
+                            orientation:'vertical'
+                            spacing:10
+                            pos_hint:{'top':0.4}
+                            size_hint: 1, 0.4
+                            MDLabel:
+                                size_hint: 1, None
+                                height:20
+                                id: prevFetched_msg
+                            BoxLayout:
+                                orientation:'vertical'
+                                pos_hint:{'top':0.5}
+                                size_hint: 1, 0.5
+                                ScrollView:
+                                    GridLayout:
+                                        cols:1
+                                        size_hint_y: None
+                                        height: self.minimum_height
+                                        row_default_height : '40dp'
+                                        spacing:10
+                                        id: contentNavigationDrawer
+
