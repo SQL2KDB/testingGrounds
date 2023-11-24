@@ -11,22 +11,27 @@ import random
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
-
+import logging
 
 def getInstrumentName(tickerSearch):
     '''scrape yahoo finance website to get actual name of instrument'''
+    logging.info('Webscraping basic stock info...')
     cookies = {}
     headers = {}
     params = {'p': tickerSearch,'.tsrc': 'fin-srch'}
-    response = requests.get('https://finance.yahoo.com/quote/'+tickerSearch, params=params, cookies=cookies, headers=headers)
-    if response.status_code==200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return soup.title.text.split(') ')[0]+')'
-    else:
+    try:
+        response = requests.get('https://finance.yahoo.com/quote/'+tickerSearch, params=params, cookies=cookies, headers=headers)
+        if response.status_code==200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            return soup.title.text.split(') ')[0]+')'
+        else:
+            return tickerSearch
+    except:
         return tickerSearch
 
 def maxDrawDown(datadf):
     '''compute drawdown and create message'''
+    logging.info('Computing max drawdow during period...')
     datadf['Date_copy']=datadf.index
     datadf=datadf.assign(indexNb=list(range(len(datadf))))
     datadf=datadf.set_index('indexNb')
@@ -47,6 +52,7 @@ def maxDrawDown(datadf):
 
 def bestWinningStreak(datadf):
     '''compute best winning streak and create message'''
+    logging.info('Computing best winning streak...')
     datadf['Date_copy']=datadf.index
     datadf=datadf.assign(indexNb=list(range(len(datadf))))
     datadf=datadf.set_index('indexNb')
@@ -67,6 +73,7 @@ def bestWinningStreak(datadf):
 def CIbounds(setLowerBound_dec,array,nbRuns=10000,operatorType='average'):
     '''compute a bootstrapped CI of a list'''
     bootstrapped_list=[]
+    logging.info('Running bootstrap to get CI...')
     if operatorType=='average':
         for i in range(nbRuns):
             bootstrapped_list.append(np.average(random.choices(array, k=len(array))))
@@ -79,6 +86,7 @@ def CIbounds(setLowerBound_dec,array,nbRuns=10000,operatorType='average'):
     return lb,ub
 def simulateTimeSeries(array,nbSims=10000):
     '''simulate perf paths given distribution'''
+    logging.info('Simulating price paths...')
     endingPrices=[]
     for i in range(nbSims):
         perf_path=random.choices(array, k=len(array))
@@ -87,7 +95,7 @@ def simulateTimeSeries(array,nbSims=10000):
             startPrice*=(1+j/100)
         endingPrices.append(startPrice)
     endingPrices.sort()
-    return np.array(endingPrices)
+    return endingPrices
 def dfToScreen(data):
     '''flexible table builder'''
     header_layout = MDBoxLayout(orientation='horizontal', size_hint=(1,None),height='20dp')
@@ -124,22 +132,20 @@ def callYfinance(ric_input, start_date, end_date):
     '''abstract the call to yfinance. Compute pct close including for first date on the table'''
     start_date_query=(datetime.strptime(start_date, "%Y-%m-%d") + relativedelta(days = -30)).strftime('%Y-%m-%d')
     # Make a call to yfinance to fetch UPRO data
+    logging.info('Using yf.download()[START]')
     data = yf.download(ric_input, start=start_date_query, end=end_date)
     if len(data)>0:
+        logging.info('Using yf.download()[SUCCESS]')
         data['ClosePctChg']=100*data['Close'].pct_change()
         data=data[start_date:end_date]
         return data
     else:
-        popup=Popup(title='Error',
-                    content=MDLabel(text='Data query failed.\n Check validity of RIC, start and end dates.\n Tap outside to close this popup.',
-                                    theme_text_color="Custom",
-                                    text_color=(1, 1, 1, 1)),
-                    size_hint=(1, 0.3))
-        popup.open()
+        logging.info('Using yf.download()[FAILED]')
         return pd.DataFrame()
 
 def createBarChart(datadf,pngNameDOTpng):
     '''create a chart with the yfinance data on close pct moves'''
+    logging.info('Creating bar charts...')
     if os.path.isfile(pngNameDOTpng):
         os.remove(pngNameDOTpng)
         print('removed previous png')
@@ -150,6 +156,7 @@ def createBarChart(datadf,pngNameDOTpng):
 
 def createPricePlot(datadf,pngNameDOTpng):
     '''create a chart with the yfinance data on close pct moves'''
+    logging.info('Creating price plots...')
     if os.path.isfile(pngNameDOTpng):
         os.remove(pngNameDOTpng)
         print('removed previous png')
