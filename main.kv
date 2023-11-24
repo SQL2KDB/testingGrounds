@@ -8,7 +8,7 @@ BoxLayout:
         #size:root.size
         orientation:'vertical'
         #padding:(0,0,0,300) # padding:(left, top, right, bottom) -- leaving size for the ad to be shown and not covered.
-        InstrumentPage:
+        Screen:
             MDNavigationLayout:
                 MDTopAppBar:
                     title: "Query Menu"
@@ -24,7 +24,7 @@ BoxLayout:
                     id: nav_drawer
                     radius: (0, 16, 16, 0)
 
-                    ContentNavigationDrawer:
+                    MDBoxLayout:
                         BoxLayout:
                             orientation:'vertical'
                             spacing:50
@@ -62,11 +62,13 @@ BoxLayout:
                                         orientation: 'horizontal'
                                         MDRaisedButton:
                                             text: 'Fetch Data'
-                                            on_release: app.fetch_data_new()
+                                            on_release: app.fetch_data()
                                         MDLabel:
                                             id: logger_text
                                             padding:10
-                                            font_size: "10sp"
+                                            markup:True
+                                            font_size: "15sp"
+                                            color: 47/255,79/255,79/255,1
                                             text:''
 
 

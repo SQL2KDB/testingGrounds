@@ -132,15 +132,13 @@ def callYfinance(ric_input, start_date, end_date):
     '''abstract the call to yfinance. Compute pct close including for first date on the table'''
     start_date_query=(datetime.strptime(start_date, "%Y-%m-%d") + relativedelta(days = -30)).strftime('%Y-%m-%d')
     # Make a call to yfinance to fetch UPRO data
-    logging.info('Using yf.download()[START]')
+    logging.info('Getting historical prices...')
     data = yf.download(ric_input, start=start_date_query, end=end_date)
     if len(data)>0:
-        logging.info('Using yf.download()[SUCCESS]')
         data['ClosePctChg']=100*data['Close'].pct_change()
         data=data[start_date:end_date]
         return data
     else:
-        logging.info('Using yf.download()[FAILED]')
         return pd.DataFrame()
 
 def createBarChart(datadf,pngNameDOTpng):
