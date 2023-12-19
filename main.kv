@@ -11,15 +11,18 @@ BoxLayout:
         Screen:
             MDNavigationLayout:
                 MDTopAppBar:
+                    id: toptoolbar
                     title: "Query Menu"
+                    pos_hint:{'top':1}
                     elevation: 4
-                    pos_hint: {"top": 1}
                     left_action_items:
                         [['menu', lambda x: nav_drawer.set_state("open")]]
                     right_action_items:
-                        [["dots-vertical", lambda x: app.getMoreAnalysis()]]
+                        [["dots-vertical", lambda x: app.getMoreAnalysis()],["bank"],["wallet"],["logout"]]
                 MDScreenManager:
                     id:rootScreenManager
+                    pos_hint: {"top":1-toptoolbar.height/self.parent.height}
+
                 MDNavigationDrawer:
                     id: nav_drawer
                     radius: (0, 16, 16, 0)

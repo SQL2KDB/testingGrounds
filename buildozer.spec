@@ -1,8 +1,8 @@
 [app]
 # (str) Title of your application
-title = kivmob_test
+title = bidule
 # (str) Package name
-package.name = kivmob_test
+package.name = bidule
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.test
 # (str) Source code where the main.py live

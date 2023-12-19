@@ -4,7 +4,7 @@ from kivy.uix.screenmanager import Screen, SlideTransition
 from kivy.uix.image import Image
 from kivy.uix.popup import Popup
 from kivymd.uix.button import MDRectangleFlatButton
-from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, CIbounds, simulateTimeSeries, maxDrawDown, bestWinningStreak,getInstrumentName
+from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, pricePlotSimulation, maxDrawDown, bestWinningStreak,getInstrumentName, bootstrapAndSim
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivmob_mod import KivMob, TestIds
@@ -23,7 +23,7 @@ class MyLabelHandler(logging.Handler):
     def emit(self, record):
         "using the Clock module for thread safety with kivy's main loop"
         def f(dt=None):
-            self.label.text = '[i]' + self.format(record) + '[/i]' #"use += to append..."
+            self.label.text = '[i]' + self.format(record) + '[/i] \n' #"use += to append..."
         Clock.schedule_once(f)
 
 class MainApp(MDApp):
@@ -59,21 +59,28 @@ class MainApp(MDApp):
         else:
             self.root.ids.nav_drawer.set_state("open")
 
-    def checkStatus(self,fetchVarName):
+    def checkStatus(self,fetchVarName,stage):
         t1Done=False
         t2Done=False
         while not (t1Done and t2Done):
             if self.t1.done():
                 t1Done=True
+                msg1='thread 1 idle. \n'
+            else:
+                msg1='thread 1 running. \n'
             if self.t2.done():
                 t2Done=True
+                msg2='thread 2 idle. \n'
+            else:
+                msg2='thread 2 running. \n'
+            self.logger0.info(stage+'\n'+msg1+msg2)
         return fetchVarName
 
     def buildRes(self,t1res,t2res,fetchVarName):
         datadf=self.datadf
         instrNameScrape=self.instrNameScrape
         self.pool.shutdown()
-        self.logger0 = logging.getLogger()
+        #self.logger0 = logging.getLogger()
         self.logger0.info('Query result returned.')
         fetchStart=fetchVarName.split('_')[1]
         fetchEnd=fetchVarName.split('_')[2]
@@ -109,25 +116,25 @@ class MainApp(MDApp):
         summary_container.add_widget(MDLabel(markup=True, text='Daily performance stats:',size_hint_y=None, height='15dp'))
 
         #daily perf CI
-        for d in [("Mean",datadf['ClosePctChg'].mean(),self.lbAvg,self.upAvg),
-                  ("Median",datadf['ClosePctChg'].median(),self.lbMed,self.upMed)]:
-            dn=[d[0]]
-            for di in [d[1],d[2],d[3]]:
-                if di <0:
-                    dn.append("[color=FF0000]"+"{:.2f}%".format(di)+"[/color]")
-                else:
-                    dn.append("[color=008000]"+"{:.2f}%".format(di)+"[/color]")
-            dLabel=MDLabel(markup=True, text="   "+dn[0]+" at 95% CI: ("+dn[2]+";[b]"+dn[1]+"[/b];"+dn[3]+")",theme_text_color='Custom',size_hint_y=None, height='15dp')
-            summary_container.add_widget(dLabel)
+        d=[datadf['ClosePctChg'].mean(),t1res[0],t1res[1]]
+        dn=[]
+        for di in [d[0],d[1],d[2]]:
+            if di <0:
+                dn.append("[color=FF0000]"+"{:.2f}%".format(di)+"[/color]")
+            else:
+                dn.append("[color=008000]"+"{:.2f}%".format(di)+"[/color]")
+        dLabel=MDLabel(markup=True, text="   Mean at 95% CI: ("+dn[1]+";[b]"+dn[0]+"[/b];"+dn[2]+")",theme_text_color='Custom',size_hint_y=None, height='15dp')
+        summary_container.add_widget(dLabel)
+        dLabel=MDLabel(markup=True, text="   Sample Std Dev: {:.2f}%".format(datadf['ClosePctChg'].std()),theme_text_color='Custom',size_hint_y=None, height='15dp')
+        summary_container.add_widget(dLabel)
 
         #Path simulation
-        simPerfs=t1res+t2res
-        simPerfs.sort()
+        simPerfs=t1res[2][len(datadf)-1].sort_values()
         simPerfs=np.array(simPerfs)
         below100=int(100*len(simPerfs[simPerfs<100])/len(simPerfs))
         below75=int(100*len(simPerfs[simPerfs<75])/len(simPerfs))
         below50=int(100*len(simPerfs[simPerfs<50])/len(simPerfs))
-        dLabel=MDLabel(markup=True, text="Path [2000] simulations:",theme_text_color='Custom',size_hint_y=None, height='15dp')
+        dLabel=MDLabel(markup=True, text="Path simulations:",theme_text_color='Custom',size_hint_y=None, height='15dp')
         summary_container.add_widget(dLabel)
         dLabel=MDLabel(markup=True, text="   [i][b]"+str(below100)+"%[/b] of paths go below 100% of initial value.[/i]",theme_text_color='Custom',size_hint_y=None, height='15dp')
         summary_container.add_widget(dLabel)
@@ -146,9 +153,13 @@ class MainApp(MDApp):
         summary_container.add_widget(MDLabel(markup=True, text='   [i]'+bws[1]+'[/i]',size_hint_y=None, height='15dp'))
         summary_container.add_widget(MDLabel(markup=True, text='   [i]'+bws[2]+'[/i]',size_hint_y=None, height='15dp'))
 
+        pricePlotSimulation(t1res[2],datadf, 'priceSim_'+fetchVarName+'.png')
+
         #add charts in the middle of the page
         chart_container.add_widget(Image(source='dailyPerfBar_'+fetchVarName.upper()+'.png', fit_mode='fill', nocache=True))
         chart_container.add_widget(Image(source='pricePlot_'+fetchVarName.upper()+'.png', fit_mode='fill', nocache=True))
+        chart_container.add_widget(Image(source='priceSim_'+fetchVarName.upper()+'.png', fit_mode='fill', nocache=True))
+        chart_container.add_widget(Image(source='zoom_priceSim_'+fetchVarName.upper()+'.png', fit_mode='fill', nocache=True))
 
         #add recap table at the end of the page
         tbh,rowlist = dfToScreen(datadf)
@@ -172,20 +183,28 @@ class MainApp(MDApp):
         self.varNameDict[fetchVarName].manager.current = fetchVarName
         self.root.ids.nav_drawer.set_state("close")
 
-        self.logger0.info('  ')
+        self.cleanThreads()
+
+
         if len(self.screenList)>0:
             self.root.ids.prevFetched_msg.text='Previously fetched queries:'
         else:
             self.root.ids.prevFetched_msg.text=''
 
-
+    def cleanThreads(self):
+        self.logger0.info('Cleaning up any previous worker threads...')
+        try:
+            self.pool.shutdown()
+            self.logger0.info('  ')
+        except:
+            self.logger0.info('Worker threads failed to shutdown (!)')
 
     def checkQueryIsGoodToGo(self,t1res,t2res,fetchVarName):
-        if (len(t1res)>0) and (fetchVarName not in self.screenList):
-            self.runBootstrap(t1res,t2res,fetchVarName)
+        if (len(t1res)>0):
+            self.runPaths(t1res,t2res,fetchVarName)
         else:
             popup=Popup(title='Error',
-                        content=MDLabel(text='Data query failed.\n Check validity of RIC, start and end dates.\n Tap outside to close this popup.',
+                        content=MDLabel(text='Data query failed.\n Check validity of RIC, start and end dates, and whether your internet connection is on.\n Tap outside to close this popup.',
                                         theme_text_color="Custom",
                                         text_color=(1, 1, 1, 1)),
                         size_hint=(1, 0.3))
@@ -193,22 +212,12 @@ class MainApp(MDApp):
             print('Query to yahoo finance failed.')
             self.logger0.info('Last query failed.')
 
-
-    def runBootstrap(self,t1res,t2res,fetchVarName):
+    def runPaths(self,t1res,t2res,fetchVarName):
         self.datadf=t1res
         self.instrNameScrape=t2res
-        self.t1=self.pool.submit(CIbounds,0.05,t1res['ClosePctChg'],nbRuns=500, operatorType='average')
-        self.t2=self.pool.submit(CIbounds,0.05,t1res['ClosePctChg'],nbRuns=500, operatorType='median')
-        self.t3=self.pool.submit(self.checkStatus,fetchVarName)
-        self.checkCompletion=Clock.schedule_interval(partial(self.checkThreadsDone,self.runPriceSim),2)
-
-    def runPriceSim(self,t1res,t2res,fetchVarName):
-        self.lbAvg,self.upAvg=t1res
-        self.lbMed,self.upMed=t2res
-        self.t1=self.pool.submit(simulateTimeSeries,self.datadf['ClosePctChg'],nbSims=1000)
-        self.t2=self.pool.submit(simulateTimeSeries,self.datadf['ClosePctChg'],nbSims=1000)
-        self.t3=self.pool.submit(self.checkStatus,fetchVarName)
-        self.checkCompletion=Clock.schedule_interval(partial(self.checkThreadsDone,self.buildRes),2)
+        self.t1=self.pool.submit(bootstrapAndSim,t1res)
+        self.t3=self.pool.submit(self.checkStatus,fetchVarName,'95CI & price paths...')
+        self.checkCompletion=Clock.schedule_interval(partial(self.checkThreadsDone,self.buildRes),0.01)
 
 
     def checkThreadsDone(self,callNextFuncOnMain,dt):
@@ -218,6 +227,8 @@ class MainApp(MDApp):
 
 
     def fetch_data(self):
+        if len(self.screenList)>0:
+            self.cleanThreads()
         # Get the start and end dates from the text inputs
         fetchRic = self.root.ids.ric_input.text.upper()
         fetchStart = self.root.ids.start_date_input.text
@@ -231,9 +242,9 @@ class MainApp(MDApp):
             self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=3)
             self.t1=self.pool.submit(callYfinance, fetchRic,fetchStart,fetchEnd)
             self.t2=self.pool.submit(getInstrumentName, fetchRic)
-            self.t3=self.pool.submit(self.checkStatus,fetchVarName)
+            self.t3=self.pool.submit(self.checkStatus,fetchVarName,'Fetching data.')
 
-            self.checkCompletion=Clock.schedule_interval(partial(self.checkThreadsDone,self.checkQueryIsGoodToGo),2)
+            self.checkCompletion=Clock.schedule_interval(partial(self.checkThreadsDone,self.checkQueryIsGoodToGo),0.01)
 
 
         else:
@@ -253,7 +264,7 @@ class MainApp(MDApp):
         self.varNameMoreDict={}
         Builder.load_file("main.kv")
         self.root.ids.prevFetched_msg.text=''
-        logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.FATAL)
+        #logging.basicConfig(filename='kikou.log', encoding='utf-8', level=logging.INFO)
 
         return self.root.ids.nav_drawer.set_state("open")
 

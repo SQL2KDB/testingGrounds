@@ -2,7 +2,8 @@ Screen:
     BoxLayout:
         size_hint: 1, 0.3
         orientation: 'vertical'
-        pos_hint: {"top": 0.92}
+        pos_hint: {"top":1}
+        padding:(0,20,0,0)
         ScrollView:
             GridLayout:
                 cols:1
@@ -13,9 +14,9 @@ Screen:
                 id: summary_container
 
     BoxLayout:
-        pos_hint: {"top": 0.65}
+        pos_hint: {"top": 0.7}
         orientation: 'vertical'
-        size_hint: 1, 0.35
+        size_hint: 1, 0.4
         ScrollView:
             GridLayout:
                 rows:1
