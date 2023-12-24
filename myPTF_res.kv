@@ -1,0 +1,17 @@
+Screen:
+    BoxLayout:
+        orientation:'vertical'
+        BoxLayout:
+            size_hint:1,0.4
+            id: myPTF_screen_1
+        BoxLayout:
+            size_hint:1,0.6
+            ScrollView:
+                GridLayout:
+                    cols:1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    row_default_height : 1000
+                    spacing:10
+                    id: myPTF_screen_2
+

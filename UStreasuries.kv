@@ -1,0 +1,34 @@
+Screen:
+    BoxLayout:
+        orientation:'vertical'
+        BoxLayout:
+            size_hint:1,0.1
+            orientation:'horizontal'
+            MDTextField:
+                id: treasYear
+                text:'2023'
+            MDTextField:
+                id: treasMonth
+                text:'12'
+            MDTextField:
+                id: treasDate
+                text:'22'
+        BoxLayout:
+            size_hint:1,0.05
+            orientation:'horizontal'
+            MDRaisedButton:
+                text: 'Clear charts'
+                on_release: app.clearChartsUStreasuryCurves()
+            MDRaisedButton:
+                text: 'Fetch Yield Curve'
+                on_release: app.refreshUStreasuryCurve()
+        BoxLayout:
+            size_hint:1,0.85
+            ScrollView:
+                GridLayout:
+                    cols:1
+                    height: self.minimum_height
+                    size_hint_y:None
+                    row_default_height: '300dp'
+                    spacing:10
+                    id: US_treasuries_screen

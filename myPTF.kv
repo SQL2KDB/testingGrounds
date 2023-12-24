@@ -1,0 +1,81 @@
+Screen:
+    BoxLayout:
+        orientation:'vertical'
+        BoxLayout:
+            size_hint:1,0.1
+            orientation:'horizontal'
+            MDLabel:
+                text:'Start:'
+            MDTextField:
+                id: startYear
+                text:'2023'
+            MDTextField:
+                id: startMonth
+                text:'10'
+            MDTextField:
+                id: startDay
+                text:'01'
+        BoxLayout:
+            size_hint:1,0.05
+            orientation:'horizontal'
+            MDLabel:
+                text:'End:'
+            MDTextField:
+                id: endYear
+                text:'2023'
+            MDTextField:
+                id: endMonth
+                text:'12'
+            MDTextField:
+                id: endDay
+                text:'31'
+        BoxLayout:
+            size_hint:1,0.05
+            orientation:'horizontal'
+            MDLabel:
+                text:'Rebal frequency:'
+            MDTextField:
+                id: rebalFreq
+                text:'20'
+
+            MDLabel:
+                text:'Upro target ratio:'
+            MDTextField:
+                id: uproTargetRatio
+                text:'50'
+        BoxLayout:
+            size_hint:1,0.05
+            orientation:'horizontal'
+            MDLabel:
+                text:'DevTarget%:'
+            MDTextField:
+                id: rebalRatioTolerance
+                text:'10'
+
+            MDLabel:
+                text:'Starting money:'
+            MDTextField:
+                id: startingMoneys
+                text:'200'
+        BoxLayout:
+            size_hint:1,0.05
+            orientation:'horizontal'
+            MDLabel:
+                text:'Use new money:'
+            MDTextField:
+                id: useNewMoney
+                text:'False'
+        BoxLayout:
+            size_hint:1,0.05
+            orientation:'horizontal'
+            MDRaisedButton:
+                text: 'Update to latest values'
+                on_release: app.reUpdatePTFassets()
+            MDRaisedButton:
+                text: 'Show chart'
+                on_release: app.refreshPTF()
+            MDLabel:
+                id:updatePTFlog
+                text: ''
+        BoxLayout:
+            size_hint:1,0.5
