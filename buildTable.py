@@ -16,22 +16,185 @@ import logging
 import math
 from io import StringIO
 
+
+def updateMyPTFassets():
+    upro=callYfinance('upro','2016-01-01','2030-12-31')
+    tmf=callYfinance('tmf','2016-01-01','2030-12-31')
+    upro['upro_closePctChg']=upro['ClosePctChg']
+    tmf['tmf_closePctChg']=tmf['ClosePctChg']
+    upro.to_csv('upro.csv')
+    tmf.to_csv('tmf.csv')
+def ptfAnalyse(start='2023-10-01',end='2023-11-03',
+               rebalFreq=20,uproTargetRatio=0.5,rebalRatioTolerance=0.01,
+               startingMoneys=200,useNewMoney=False,showOutput=True):
+    pd.options.mode.chained_assignment = None
+    pd.options.display.float_format = '{:,.1f}'.format
+    pd.set_option('display.min_rows', 50)  # <-add this!
+    pd.set_option('display.max_rows', 50)
+
+    upro=pd.read_csv('upro.csv')
+    tmf=pd.read_csv('tmf.csv')
+    upro=upro.set_index('Date')
+    tmf=tmf.set_index('Date')
+
+    ptf=pd.merge(upro['upro_closePctChg'],tmf['tmf_closePctChg'],on='Date')
+    ptf.loc[(ptf['upro_closePctChg']<=0)&(ptf['tmf_closePctChg']>=0),'Type']='upro<0, tmf>0'
+    ptf.loc[(ptf['upro_closePctChg']>=0)&(ptf['tmf_closePctChg']>=0),'Type']='upro>0, tmf>0'
+    ptf.loc[(ptf['upro_closePctChg']>=0)&(ptf['tmf_closePctChg']<=0),'Type']='upro>0, tmf<0'
+    ptf.loc[(ptf['upro_closePctChg']<=0)&(ptf['tmf_closePctChg']<=0),'Type']='upro<0, tmf<0'
+    ptf=ptf[start:end]
+
+    #rebalFreq=10
+    #uproTargetRatio=0.5
+    #rebalRatioTolerance=0.01
+    #startingMoneys=200
+    #useNewMoney=False
+
+    ptf_ratioUPRO_s=[]
+    ptf_ratioTMF_s=[]
+    ptf_valueUPRO_s=[]
+    ptf_valueTMF_s=[]
+    ptf_cfUPRO_s=[]
+    ptf_cfTMF_s=[]
+    ptf_ratioUPRO_e=[]
+    ptf_ratioTMF_e=[]
+    ptf_valueUPRO_e=[]
+    ptf_valueTMF_e=[]
+    ptf_cfUPRO_e=[]
+    ptf_cfTMF_e=[]
+    for i in range(len(ptf)):
+        if i==0:
+            ptf_valueUPRO_s.append(startingMoneys*uproTargetRatio)
+            ptf_valueTMF_s.append(startingMoneys*(1-uproTargetRatio))
+            ptf_cfUPRO_s.append(startingMoneys*uproTargetRatio)
+            ptf_cfTMF_s.append(startingMoneys*(1-uproTargetRatio))
+            ptf_ratioUPRO_s.append(ptf_valueUPRO_s[i]/(ptf_valueUPRO_s[i]+ptf_valueTMF_s[i]))
+            ptf_ratioTMF_s.append(ptf_valueTMF_s[i]/(ptf_valueUPRO_s[i]+ptf_valueTMF_s[i]))
+
+
+        else:
+            if ((ptf_ratioUPRO_e[i-1]<=(uproTargetRatio-rebalRatioTolerance)) or \
+                (ptf_ratioUPRO_e[i-1]>=(uproTargetRatio+rebalRatioTolerance))) and \
+                    ptf.reset_index().index[i]%rebalFreq==0:
+
+                if (useNewMoney=='True') or (useNewMoney=='true'):
+                    shortfall=ptf_valueUPRO_e[i-1]-ptf_valueTMF_e[i-1]
+                    if shortfall>0:
+                        ptf_cfUPRO_s.append(0)
+                        ptf_cfTMF_s.append(shortfall)
+                        ptf_valueUPRO_s.append(ptf_valueUPRO_e[i-1])
+                        ptf_valueTMF_s.append(ptf_valueTMF_e[i-1]+shortfall)
+                    else:
+                        ptf_cfUPRO_s.append(shortfall)
+                        ptf_cfTMF_s.append(0)
+                        ptf_valueUPRO_s.append(ptf_valueUPRO_e[i-1]+shortfall)
+                        ptf_valueTMF_s.append(ptf_valueTMF_e[i-1])
+                else:
+                    if ptf_valueTMF_e[i-1]-ptf_valueUPRO_e[i-1]>0:
+                        ptf_cfUPRO_s.append((ptf_valueTMF_e[i-1]-ptf_valueUPRO_e[i-1])/2)
+                        ptf_cfTMF_s.append(-1*(ptf_valueTMF_e[i-1]-ptf_valueUPRO_e[i-1])/2)
+                        ptf_valueUPRO_s.append(ptf_valueUPRO_e[i-1]+(ptf_valueTMF_e[i-1]-ptf_valueUPRO_e[i-1])/2)
+                        ptf_valueTMF_s.append(ptf_valueTMF_e[i-1]-1*(ptf_valueTMF_e[i-1]-ptf_valueUPRO_e[i-1])/2)
+                    if ptf_valueUPRO_e[i-1]-ptf_valueTMF_e[i-1]>0:
+                        ptf_cfTMF_s.append((ptf_valueUPRO_e[i-1]-ptf_valueTMF_e[i-1])/2)
+                        ptf_cfUPRO_s.append(-1*(ptf_valueUPRO_e[i-1]-ptf_valueTMF_e[i-1])/2)
+                        ptf_valueUPRO_s.append(ptf_valueUPRO_e[i-1]-1*(ptf_valueUPRO_e[i-1]-ptf_valueTMF_e[i-1])/2)
+                        ptf_valueTMF_s.append(ptf_valueTMF_e[i-1]+(ptf_valueUPRO_e[i-1]-ptf_valueTMF_e[i-1])/2)
+
+                ptf_ratioUPRO_s.append(ptf_valueUPRO_s[i]/(ptf_valueUPRO_s[i]+ptf_valueTMF_s[i]))
+                ptf_ratioTMF_s.append(ptf_valueTMF_s[i]/(ptf_valueUPRO_s[i]+ptf_valueTMF_s[i]))
+
+            else:
+                ptf_valueUPRO_s.append(ptf_valueUPRO_e[i-1])
+                ptf_valueTMF_s.append(ptf_valueTMF_e[i-1])
+                ptf_ratioUPRO_s.append(ptf_ratioUPRO_e[i-1])
+                ptf_ratioTMF_s.append(ptf_ratioTMF_e[i-1])
+                ptf_cfUPRO_s.append(0)
+                ptf_cfTMF_s.append(0)
+
+        ptf_valueUPRO_e.append(ptf_valueUPRO_s[i]*(1+ptf['upro_closePctChg'].iloc[i]/100))
+        ptf_valueTMF_e.append(ptf_valueTMF_s[i]*(1+ptf['tmf_closePctChg'].iloc[i]/100))
+        ptf_ratioUPRO_e.append(ptf_valueUPRO_e[i]/(ptf_valueUPRO_e[i]+ptf_valueTMF_e[i]))
+        ptf_ratioTMF_e.append(ptf_valueTMF_e[i]/(ptf_valueUPRO_e[i]+ptf_valueTMF_e[i]))
+
+    ##look at number of days ups and downs
+    chronological=False
+    ptf_incrDays=ptf.sort_values('Date',ascending=chronological)
+    ptf_incrDays['cumTypeCount']=ptf_incrDays.groupby(['Type']).cumcount()+1
+    ptf_incrDays=ptf_incrDays.reset_index().pivot(index='Date', columns='Type', values='cumTypeCount').sort_values('Date',ascending=chronological).ffill().fillna(0)
+    ptf_incrDays['CountDay']=ptf_incrDays.reset_index().index+1
+    for col in ['upro<0, tmf<0','upro>0, tmf>0','upro<0, tmf>0','upro>0, tmf<0']:
+        if col not in ptf_incrDays.columns:
+            ptf_incrDays[col]=0
+    #show output if needed
+    if showOutput:
+        perf='{:,.2f}%'.format(100*(((ptf_valueUPRO_e[-1]+ptf_valueTMF_e[-1])/(np.array(ptf_cfUPRO_s)+np.array(ptf_cfTMF_s)).sum())-1))
+
+        summaryText=''
+        summaryText+='Performance of '+perf+' \n'
+        summaryText+='PnL of '+format(int(ptf_valueUPRO_e[-1]+ptf_valueTMF_e[-1])-int(np.array(ptf_cfUPRO_s).sum()+np.array(ptf_cfTMF_s).sum()),',d') + ' HKD'+' \n'
+        summaryText+='           '+' \n'
+        #print('Influx of '+format(int((np.array(ptf_cfUPRO_s)[np.array(ptf_cfUPRO_s)>0].sum())+np.array(ptf_cfTMF_s)[np.array(ptf_cfTMF_s)>0].sum()),',d')+' HKD')
+        #print('Breakdown: '+format(int(np.array(ptf_cfUPRO_s)[np.array(ptf_cfUPRO_s)>0].sum()),',d')+' HKD of UPRO, of which '+format(int(ptf_valueUPRO_s[0]),',d')+ ' HKD was initial seed.')
+        #print('           '+format(int(np.array(ptf_cfTMF_s)[np.array(ptf_cfTMF_s)>0].sum()),',d')+' HKD of TMF, of which '+format(int(ptf_valueTMF_s[0]),',d')+ ' HKD was initial seed.')
+        #print('           ')
+        summaryText+='Last valuation at '+format(int(ptf_valueUPRO_e[-1]+ptf_valueTMF_e[-1]),',d')+ ' HKD'+' \n'
+        summaryText+='Breakdown: '+format(int(ptf_valueUPRO_e[-1]),',d')+' HKD of UPRO'+' \n'
+        summaryText+='                      '+format(int(ptf_valueTMF_e[-1]),',d')+' HKD of TMF'+' \n'
+        summaryText+='           '+' \n'
+        summaryText+='Influx of '+format(int(np.array(ptf_cfUPRO_s).sum()+np.array(ptf_cfTMF_s).sum()),',d')+' HKD'+' \n'
+        summaryText+='Breakdown: '+format(int(np.array(ptf_cfUPRO_s).sum()),',d')+' HKD of UPRO, of which '+format(int(ptf_valueUPRO_s[0]),',d')+ ' HKD was initial seed.'+' \n'
+        summaryText+='                     '+format(int(np.array(ptf_cfTMF_s).sum()),',d')+' HKD of TMF, of which '+format(int(ptf_valueTMF_s[0]),',d')+ ' HKD was initial seed.'+' \n'
+        summaryText+='            '+' \n'
+
+        fig, (ax, ax1, ax2) = plt.subplots(nrows=3, sharex=True,figsize=(8, 8),constrained_layout = True)
+
+        ax.plot(ptf.index,np.array(ptf_valueUPRO_e)+np.array(ptf_valueTMF_e),label='ptf ending value')
+
+
+        ax1.plot(ptf_incrDays.index,np.array(ptf_incrDays['upro<0, tmf<0'].values),label='upro<0, tmf<0', color='blue')
+        ax1.plot(ptf_incrDays.index,np.array(ptf_incrDays['upro>0, tmf>0'].values),label='upro>0, tmf>0',color='red')
+        ax1.plot(ptf_incrDays.index,np.array(ptf_incrDays['upro<0, tmf>0'].values),label='upro<0, tmf>0',color='orange')
+        ax1.plot(ptf_incrDays.index,np.array(ptf_incrDays['upro>0, tmf<0'].values),label='upro>0, tmf<0',color='green')
+
+        ax2.bar(ptf_incrDays.index,np.array(ptf_incrDays['upro<0, tmf<0'].values/ptf_incrDays['CountDay'].values),label='upro<0, tmf<0',color='blue')
+        ax2.bar(ptf_incrDays.index,np.array(ptf_incrDays['upro>0, tmf>0'].values/ptf_incrDays['CountDay'].values),bottom=np.array(ptf_incrDays['upro<0, tmf<0'].values/ptf_incrDays['CountDay'].values),label='upro>0, tmf>0',color='red')
+        ax2.bar(ptf_incrDays.index,np.array(ptf_incrDays['upro<0, tmf>0'].values/ptf_incrDays['CountDay'].values),bottom=np.array(ptf_incrDays['upro<0, tmf<0'].values/ptf_incrDays['CountDay'].values)+np.array(ptf_incrDays['upro>0, tmf>0'].values/ptf_incrDays['CountDay'].values),label='upro<0, tmf>0',color='orange')
+        ax2.bar(ptf_incrDays.index,np.array(ptf_incrDays['upro>0, tmf<0'].values/ptf_incrDays['CountDay'].values),bottom=np.array(ptf_incrDays['upro<0, tmf<0'].values/ptf_incrDays['CountDay'].values)+np.array(ptf_incrDays['upro>0, tmf>0'].values/ptf_incrDays['CountDay'].values)+np.array(ptf_incrDays['upro<0, tmf>0'].values/ptf_incrDays['CountDay'].values),label='upro>0, tmf<0',color='green')
+
+        for label in ax2.get_xticklabels():
+            label.set_rotation(90)
+        for axis in [ax, ax1, ax2]:
+            axis.minorticks_on()
+            axis.xaxis.set_tick_params(which='minor', bottom=True)
+            axis.xaxis.grid(True, which='minor')
+            axis.yaxis.grid(True, which='major')
+        plt.legend(bbox_to_anchor=(0.5, -0.5))
+        plt.savefig("myPTF.png", transparent=True)
+    return summaryText, pd.merge(ptf_incrDays, pd.DataFrame({'Date':ptf.index, 'ptf_value':np.array(ptf_valueUPRO_e)+np.array(ptf_valueTMF_e),'upro_value':np.array(ptf_valueUPRO_e),'tmf_value':np.array(ptf_valueTMF_e)}).set_index('Date'),on='Date')
 def chartYieldCurve(year=2023,month=12,day=18):
     '''chart US treasury yield curve'''
+
+    dictDuration={'1 Mo':1/12, '2 Mo':1/6, '3 Mo':1/4,'4 Mo':1/3, '6 Mo':1/2, '1 Yr':1, '2 Yr':2, '3 Yr':3, '5 Yr':5,
+                  '7 Yr':7, '10 Yr':10, '20 Yr':20, '30 Yr':30}
     fig, ax = plt.subplots()
     plotRatetable=pd.read_csv('USrates_{YEAR}.csv'.format(YEAR=str(year)))
-    plotRatetable['Date']=[datetime.strptime(i, "%m/%d/%Y") for i in df['Date']]
+    plotRatetable['Date']=[datetime.strptime(i, "%m/%d/%Y") for i in plotRatetable['Date']]
     plotRatetable=plotRatetable.sort_values('Date',ascending=True).reset_index()
     plotRatetable=plotRatetable.iloc[plotRatetable['Date'].searchsorted(datetime(year, month, day))]
-
-    plotRatetable=plotRatetable[["1 Mo","2 Mo","3 Mo","4 Mo","6 Mo","1 Yr","2 Yr","3 Yr","5 Yr","7 Yr","10 Yr","20 Yr","30 Yr"]]
+    col2plot=np.array(plotRatetable.index)[[i[0].isnumeric() for i in plotRatetable.index]]
+    x4cols=[dictDuration[i] for i in col2plot]
+    plotRatetable=plotRatetable[col2plot]
     masking=np.isfinite(plotRatetable.values.astype(float) )
-    ax.plot(np.array([1/12,2/12,3/12,4/12,6/12,1,2,3,5,7,10,20,30])[masking],plotRatetable.values.astype(float)[masking],marker="o")
+    ax.plot(np.array(x4cols)[masking],plotRatetable.values.astype(float)[masking],marker="o")
     ax.set_xlabel('Maturities')
     ax.set_ylabel('Yield in %')
     ax.set_title('US treasury yields - '+str(year)+'/'+str(month)+'/'+str(day))
-    return plt.savefig(chartYield.png, transparent=True)
-def refreshUStreasuryData():
+    ax.set_ylim(0,8)
+    for i, j in zip(np.array(x4cols)[masking],plotRatetable.values.astype(float)[masking]):
+        ax.text(i,j, str(j), ha='center', va='bottom')
+    return plt.savefig("chartYield.png", transparent=True)
+def refreshUStreasuryData(year,month,day):
     '''downloads US treasury data'''
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -40,19 +203,26 @@ def refreshUStreasuryData():
     params = {}
     response=[]
     strReq="https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{YEAR}/all?type=daily_treasury_yield_curve&field_tdr_date_value={YEAR}&page&_format=csv"
-    for year in range(2017,2024):
-        #for year in [2016]:
-        if os.path.isfile('USrates_{YEAR}.csv'.format(YEAR=str(year))):
+
+    query=True
+    if os.path.isfile('USrates_{YEAR}.csv'.format(YEAR=str(year))):
+        if datetime.today().year<int(year):
             logging.info(str(year)+' already queried.')
+            query=False
         else:
-            logging.info('Querying '+str(year)+' [START] '+str(datetime.now(tzlocal())))
-            response=requests.get(strReq.format(YEAR=str(year)), params=params, cookies=cookies, headers=headers)
-            if response.status_code==200:
-                with open('USrates_{YEAR}.csv'.format(YEAR=str(year)),'w') as f:
-                    f.write(response.text)
-                    #logging.info('Yields for {YEAR} saved to csv!'.format(YEAR=str(year)))
-            else:
-                logging.info('query of {YEAR} failed.'.format(YEAR=str(year)))
+            checkPD=pd.read_csv('USrates_{YEAR}.csv'.format(YEAR=str(year)))
+            if datetime(year, month, day)<= datetime.strptime(max(checkPD['Date']),'%m/%d/%Y'):
+                query=False
+
+    if query:
+        logging.info('Querying '+str(year)+' [START] '+str(datetime.now(tzlocal())))
+        response=requests.get(strReq.format(YEAR=str(year)), params=params, cookies=cookies, headers=headers)
+        if response.status_code==200:
+            with open('USrates_{YEAR}.csv'.format(YEAR=str(year)),'w') as f:
+                f.write(response.text)
+                #logging.info('Yields for {YEAR} saved to csv!'.format(YEAR=str(year)))
+        else:
+            logging.info('query of {YEAR} failed.'.format(YEAR=str(year)))
 
 
 

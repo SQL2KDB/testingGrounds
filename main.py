@@ -4,7 +4,7 @@ from kivy.uix.screenmanager import Screen, SlideTransition
 from kivy.uix.image import Image
 from kivy.uix.popup import Popup
 from kivymd.uix.button import MDRectangleFlatButton
-from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, pricePlotSimulation, maxDrawDown, bestWinningStreak,getInstrumentName, bootstrapAndSim
+from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, pricePlotSimulation, maxDrawDown, bestWinningStreak,getInstrumentName, bootstrapAndSim, refreshUStreasuryData, chartYieldCurve,updateMyPTFassets,ptfAnalyse
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivmob_mod import KivMob, TestIds
@@ -49,7 +49,7 @@ class MainApp(MDApp):
 
     def getMoreAnalysis(self):
         '''screen placeholder for further analysis'''
-        if len(self.screenList)>0:
+        if len(self.screenList)>0 and (("myPTFscreen" not in self.root.ids.rootScreenManager.current) and ("USyieldsScreen" not in self.root.ids.rootScreenManager.current)):
             if "_more" in self.root.ids.rootScreenManager.current:
                 self.root.ids.rootScreenManager.transition = SlideTransition(direction='right')
                 self.varNameDict[self.root.ids.rootScreenManager.current.replace("_more","")].manager.current = self.root.ids.rootScreenManager.current.replace("_more","")
@@ -58,6 +58,112 @@ class MainApp(MDApp):
                 self.varNameMoreDict[self.root.ids.rootScreenManager.current+'_more'].manager.current = self.root.ids.rootScreenManager.current+'_more'
         else:
             self.root.ids.nav_drawer.set_state("open")
+
+    def seeMyPTF(self):
+        if "myPTFscreen" in self.screenList:
+            if ("myPTFscreen_res" in self.screenList) and self.varNameDict[self.root.ids.rootScreenManager.current].manager.current=="myPTFscreen":
+                self.root.ids.rootScreenManager.transition = SlideTransition(direction='left')
+                self.varNameDict["myPTFscreen_res"].manager.current="myPTFscreen_res"
+            elif ("myPTFscreen_res" in self.screenList) and self.varNameDict[self.root.ids.rootScreenManager.current].manager.current=="myPTFscreen_res":
+                self.root.ids.rootScreenManager.transition = SlideTransition(direction='right')
+                self.varNameDict["myPTFscreen"].manager.current="myPTFscreen"
+            elif ("myPTFscreen_res" in self.screenList):
+                self.varNameDict["myPTFscreen"].manager.current="myPTFscreen"
+            #US_treasuries_screen = self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen
+            #US_treasuries_screen.clear_widgets()
+        else:
+            self.root.ids.rootScreenManager.transition = SlideTransition(direction='left')
+            self.screenList.append("myPTFscreen")
+            self.varNameDict["myPTFscreen"]=Builder.load_file('myPTF.kv')
+            self.varNameDict["myPTFscreen"].name = "myPTFscreen"
+            self.root.ids.rootScreenManager.add_widget(self.varNameDict["myPTFscreen"])
+
+            self.screenList.append("myPTFscreen_res")
+            self.varNameDict["myPTFscreen_res"]=Builder.load_file('myPTF_res.kv')
+            self.varNameDict["myPTFscreen_res"].name = "myPTFscreen_res"
+            self.root.ids.rootScreenManager.add_widget(self.varNameDict["myPTFscreen_res"])
+        #US_treasuries_screen = self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen
+            self.varNameDict["myPTFscreen"].manager.current="myPTFscreen"
+            myPTF_container_1 = self.varNameDict["myPTFscreen_res"].ids.myPTF_screen_1
+            myPTF_container_1.add_widget(MDLabel(text='No results to show yet. Do a query by clicking on the wallet icon.'))
+    def reUpdatePTFassets(self):
+        updateMyPTFassets()
+        self.varNameDict["myPTFscreen"].ids.updatePTFlog.text = 'Updated.'
+        self.cleanLogs()
+    def refreshPTF(self):
+        myPTF_container_1 = self.varNameDict["myPTFscreen_res"].ids.myPTF_screen_1
+        myPTF_container_2 = self.varNameDict["myPTFscreen_res"].ids.myPTF_screen_2
+
+        #myPTFsummary = self.varNameDict["myPTFscreen"].ids.myPTFsummary
+        self.varNameDict["myPTFscreen"].ids.updatePTFlog.text = ''
+        myPTF_container_1.clear_widgets()
+        myPTF_container_2.clear_widgets()
+        startYear = self.varNameDict["myPTFscreen"].ids.startYear.text
+        startMonth = self.varNameDict["myPTFscreen"].ids.startMonth.text
+        startDay = self.varNameDict["myPTFscreen"].ids.startDay.text
+        endYear = self.varNameDict["myPTFscreen"].ids.endYear.text
+        endMonth = self.varNameDict["myPTFscreen"].ids.endMonth.text
+        endDay = self.varNameDict["myPTFscreen"].ids.endDay.text
+
+        rebalFreq = self.varNameDict["myPTFscreen"].ids.rebalFreq.text
+        uproTargetRatio = self.varNameDict["myPTFscreen"].ids.uproTargetRatio.text
+        rebalRatioTolerance = self.varNameDict["myPTFscreen"].ids.rebalRatioTolerance.text
+        startingMoneys = self.varNameDict["myPTFscreen"].ids.startingMoneys.text
+        useNewMoney = self.varNameDict["myPTFscreen"].ids.useNewMoney.text
+
+        #try:
+        if os.path.isfile('upro.csv') and os.path.isfile('tmf.csv'):
+            pass
+        else:
+            updateMyPTFassets()
+        res1,res2=ptfAnalyse(start=startYear+'-'+startMonth+'-'+startDay,end=endYear+'-'+endMonth+'-'+endDay,
+                             rebalFreq=int(rebalFreq), uproTargetRatio=float(uproTargetRatio)/100, rebalRatioTolerance=float(rebalRatioTolerance)/100,
+                             startingMoneys=int(startingMoneys), useNewMoney=useNewMoney)
+        myPTF_container_1.add_widget(MDLabel(text=res1))
+        myPTF_container_2.add_widget(Image(source="myPTF.png", nocache=True,fit_mode='fill'))
+        self.varNameDict["myPTFscreen_res"].manager.current="myPTFscreen_res"
+        #except:
+            #myPTF_container.add_widget(MDLabel(text='Error. Check date or connectivity.'))
+        self.cleanLogs()
+
+    def seeUStreasuryYields(self):
+        self.root.ids.rootScreenManager.transition = SlideTransition(direction='right')
+        if "USyieldsScreen" in self.screenList:
+            pass
+            #US_treasuries_screen = self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen
+            #US_treasuries_screen.clear_widgets()
+        else:
+            self.screenList.append("USyieldsScreen")
+            self.varNameDict["USyieldsScreen"]=Builder.load_file('UStreasuries.kv')
+            self.varNameDict["USyieldsScreen"].name = "USyieldsScreen"
+            self.root.ids.rootScreenManager.add_widget(self.varNameDict["USyieldsScreen"])
+        #US_treasuries_screen = self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen
+        self.varNameDict["USyieldsScreen"].manager.current="USyieldsScreen"
+
+    def clearChartsUStreasuryCurves(self):
+        treasury_container = self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen
+        treasury_container.clear_widgets()
+    def refreshUStreasuryCurve(self):
+        treasury_container = self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen
+        #treasury_container.clear_widgets()
+        treasYear = self.varNameDict["USyieldsScreen"].ids.treasYear.text
+        treasMonth = self.varNameDict["USyieldsScreen"].ids.treasMonth.text
+        treasDate = self.varNameDict["USyieldsScreen"].ids.treasDate.text
+        refreshUStreasuryData(int(treasYear),int(treasMonth),int(treasDate))
+        try:
+            for i in range(len(self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen.children)):
+                if isinstance(self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen.children[i],MDLabel):
+                    if self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen.children[i].id=='fillerBlock':
+                        treasury_container.remove_widget(self.varNameDict["USyieldsScreen"].ids.US_treasuries_screen.children[i])
+        except:
+            pass
+        try:
+            chartYieldCurve(int(treasYear),int(treasMonth),int(treasDate))
+            treasury_container.add_widget(Image(source='chartYield.png', nocache=True,fit_mode='contain'))
+            treasury_container.add_widget(MDLabel(text='',id='fillerBlock'))
+        except:
+            treasury_container.add_widget(MDLabel(text='Error. Check date or connectivity.'))
+        self.cleanLogs()
 
     def checkStatus(self,fetchVarName,stage):
         t1Done=False
@@ -111,6 +217,7 @@ class MainApp(MDApp):
 
 
         #start of page summary
+        summary_container.add_widget(MDLabel(markup=True, text='',size_hint_y=None, height='5dp'))
         summary_container.add_widget(MDLabel(markup=True, text='[b]'+instrNameScrape+'[/b]',size_hint_y=None, height='15dp'))
         summary_container.add_widget(MDLabel(markup=True, text='   (queried from '+fetchStart+' to '+fetchEnd+')',size_hint_y=None, height='15dp'))
         summary_container.add_widget(MDLabel(markup=True, text='Daily performance stats:',size_hint_y=None, height='15dp'))
@@ -227,6 +334,7 @@ class MainApp(MDApp):
 
 
     def fetch_data(self):
+
         if len(self.screenList)>0:
             self.cleanThreads()
         # Get the start and end dates from the text inputs
@@ -237,8 +345,6 @@ class MainApp(MDApp):
         self.currentName=fetchVarName
         if fetchVarName not in self.screenList:
 
-            self.logger0 = logging.getLogger()
-            self.logger0.addHandler(MyLabelHandler(self.root.ids.logger_text,logging.INFO))
             self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=3)
             self.t1=self.pool.submit(callYfinance, fetchRic,fetchStart,fetchEnd)
             self.t2=self.pool.submit(getInstrumentName, fetchRic)
@@ -265,8 +371,12 @@ class MainApp(MDApp):
         Builder.load_file("main.kv")
         self.root.ids.prevFetched_msg.text=''
         #logging.basicConfig(filename='kikou.log', encoding='utf-8', level=logging.INFO)
+        self.logger0 = logging.getLogger()
+        self.logger0.addHandler(MyLabelHandler(self.root.ids.logger_text,logging.INFO))
+        self.root.ids.nav_drawer.set_state("open")
+        return self.cleanLogs()
 
-        return self.root.ids.nav_drawer.set_state("open")
-
+    def cleanLogs(self):
+        Clock.schedule_once(lambda x:self.logger0.info(''),3)
 
 MainApp().run()
