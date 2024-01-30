@@ -52,7 +52,7 @@ BoxLayout:
                                             text: 'Start:'
                                         MDTextField:
                                             id: start_date_input
-                                            text:'2024-01-01'
+                                            text:'%s'
                                     BoxLayout:
                                         orientation: 'horizontal'
                                         MDLabel:
@@ -60,7 +60,7 @@ BoxLayout:
                                             text: 'End:'
                                         MDTextField:
                                             id: end_date_input
-                                            text:'2024-01-30'
+                                            text:'%s'
                                     BoxLayout:
                                         orientation: 'horizontal'
                                         MDRaisedButton:

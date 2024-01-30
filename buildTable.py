@@ -3,6 +3,8 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivy.uix.popup import Popup
 from datetime import datetime
+import pytz
+from pandas.tseries.offsets import BDay
 from dateutil.tz import tzlocal
 from dateutil.relativedelta import relativedelta
 import yfinance as yf
@@ -16,6 +18,28 @@ import logging
 import math
 from io import StringIO
 
+class prodDateString:
+    def __init__(self,userDate='', tzChoice='Asia/Hong_Kong'):
+        if userDate=='':
+            self.currentDateTime=datetime.now(tz=pytz.timezone(tzChoice))
+        else:
+            self.currentDateTime=datetime.strptime(userDate, '%Y-%m-%d')
+    def prevBday(self,nbDays):
+        return (self.currentDateTime.date()-BDay(nbDays)).date().strftime('%Y-%m-%d')
+    def soy(self):
+        return str(self.currentDateTime.date().year)+'-01-01'
+    def som(self):
+        return str((self.currentDateTime.date()-timedelta(days=self.currentDateTime.date().day-1)).strftime('%Y-%m-%d'))
+    def soq(self):
+        if self.currentDateTime.date().month in (1,2,3):
+            quarterStart=datetime(self.currentDateTime.date().year,1,1)
+        elif self.currentDateTime.date().month in (4,5,6):
+            quarterStart=datetime(self.currentDateTime.date().year,4,1)
+        elif self.currentDateTime.date().month in (7,8,9):
+            quarterStart=datetime(self.currentDateTime.date().year,7,1)
+        elif self.currentDateTime.date().month in (10,11,12):
+            quarterStart=datetime(self.currentDateTime.date().year,10,1)
+        return quarterStart.strftime('%Y-%m-%d')
 
 def updateMyPTFassets():
     upro=callYfinance('upro','2016-01-01','2030-12-31')

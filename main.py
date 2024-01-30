@@ -4,7 +4,7 @@ from kivy.uix.screenmanager import Screen, SlideTransition
 from kivy.uix.image import Image
 from kivy.uix.popup import Popup
 from kivymd.uix.button import MDRectangleFlatButton
-from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, pricePlotSimulation, maxDrawDown, bestWinningStreak,getInstrumentName, bootstrapAndSim, refreshUStreasuryData, chartYieldCurve,updateMyPTFassets,ptfAnalyse
+from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, pricePlotSimulation, maxDrawDown, bestWinningStreak,getInstrumentName, bootstrapAndSim, refreshUStreasuryData, chartYieldCurve,updateMyPTFassets,ptfAnalyse, prodDateString
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivmob_mod import KivMob, TestIds
@@ -368,6 +368,12 @@ class MainApp(MDApp):
         self.ads.show_banner()
         self.varNameDict={}
         self.varNameMoreDict={}
+        prdDateString=prodDateString()
+        with open("main_loadText.txt", 'r') as f:
+            content=f.read()
+            content=content % (prdDateString.soy(),prdDateString.prevBday(0))
+            with open("main.kv",'w') as fe:
+                fe.write(content)
         Builder.load_file("main.kv")
         self.root.ids.prevFetched_msg.text=''
         #logging.basicConfig(filename='kikou.log', encoding='utf-8', level=logging.INFO)
