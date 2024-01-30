@@ -4,7 +4,7 @@ from kivy.uix.screenmanager import Screen, SlideTransition
 from kivy.uix.image import Image
 from kivy.uix.popup import Popup
 from kivymd.uix.button import MDRectangleFlatButton
-from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, pricePlotSimulation, maxDrawDown, bestWinningStreak,getInstrumentName, bootstrapAndSim, refreshUStreasuryData, chartYieldCurve,updateMyPTFassets,ptfAnalyse, prodDateString
+from buildTable import dfToScreen, callYfinance, createBarChart, createPricePlot, pricePlotSimulation, maxDrawDown, bestWinningStreak,getInstrumentName, bootstrapAndSim, refreshUStreasuryData, chartYieldCurve,updateMyPTFassets,ptfAnalyse, prodDateString, make2digits
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivmob_mod import KivMob, TestIds
@@ -74,6 +74,13 @@ class MainApp(MDApp):
         else:
             self.root.ids.rootScreenManager.transition = SlideTransition(direction='left')
             self.screenList.append("myPTFscreen")
+            prdDateString=prodDateString()
+            with open("myPTF_txt.txt", 'r') as f:
+                content=f.read()
+                content=content % (prdDateString.soq().split('-')[0],prdDateString.soq().split('-')[1],prdDateString.soq().split('-')[2],
+                    prdDateString.prevBday(0).split('-')[0],prdDateString.prevBday(0).split('-')[1],prdDateString.prevBday(0).split('-')[2])
+                with open("myPTF.kv",'w') as fe:
+                    fe.write(content)
             self.varNameDict["myPTFscreen"]=Builder.load_file('myPTF.kv')
             self.varNameDict["myPTFscreen"].name = "myPTFscreen"
             self.root.ids.rootScreenManager.add_widget(self.varNameDict["myPTFscreen"])
@@ -134,6 +141,12 @@ class MainApp(MDApp):
             #US_treasuries_screen.clear_widgets()
         else:
             self.screenList.append("USyieldsScreen")
+            prdDateString=prodDateString()
+            with open("UStreasuries_txt.txt", 'r') as f:
+                content=f.read()
+                content=content % (str(prdDateString.prevBdayRAW(1).year),str(prdDateString.prevBdayRAW(1).month),str(prdDateString.prevBdayRAW(1).day))
+                with open("UStreasuries.kv",'w') as fe:
+                    fe.write(content)
             self.varNameDict["USyieldsScreen"]=Builder.load_file('UStreasuries.kv')
             self.varNameDict["USyieldsScreen"].name = "USyieldsScreen"
             self.root.ids.rootScreenManager.add_widget(self.varNameDict["USyieldsScreen"])

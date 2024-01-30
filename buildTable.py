@@ -18,12 +18,19 @@ import logging
 import math
 from io import StringIO
 
+def make2digits(x):
+    if len(x)==1:
+        return '0'+x
+    else:
+        return x
 class prodDateString:
     def __init__(self,userDate='', tzChoice='Asia/Hong_Kong'):
         if userDate=='':
-            self.currentDateTime=datetime.now(tz=pytz.timezone(tzChoice))
+            self.currentDateTime=datetime.now()#tz=pytz.timezone(tzChoice))
         else:
             self.currentDateTime=datetime.strptime(userDate, '%Y-%m-%d')
+    def prevBdayRAW(self,nbDays):
+        return (self.currentDateTime.date()-BDay(nbDays)).date()
     def prevBday(self,nbDays):
         return (self.currentDateTime.date()-BDay(nbDays)).date().strftime('%Y-%m-%d')
     def soy(self):

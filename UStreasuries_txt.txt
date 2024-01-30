@@ -6,13 +6,13 @@ Screen:
             orientation:'horizontal'
             MDTextField:
                 id: treasYear
-                text:'2024'
+                text:'%s'
             MDTextField:
                 id: treasMonth
-                text:'1'
+                text:'%s'
             MDTextField:
                 id: treasDate
-                text:'29'
+                text:'%s'
         BoxLayout:
             size_hint:1,0.05
             orientation:'horizontal'

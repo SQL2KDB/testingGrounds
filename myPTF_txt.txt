@@ -8,13 +8,13 @@ Screen:
                 text:'Start:'
             MDTextField:
                 id: startYear
-                text:'2024'
+                text:'%s'
             MDTextField:
                 id: startMonth
-                text:'01'
+                text:'%s'
             MDTextField:
                 id: startDay
-                text:'01'
+                text:'%s'
         BoxLayout:
             size_hint:1,0.05
             orientation:'horizontal'
@@ -22,13 +22,13 @@ Screen:
                 text:'End:'
             MDTextField:
                 id: endYear
-                text:'2024'
+                text:'%s'
             MDTextField:
                 id: endMonth
-                text:'01'
+                text:'%s'
             MDTextField:
                 id: endDay
-                text:'30'
+                text:'%s'
         BoxLayout:
             size_hint:1,0.05
             orientation:'horizontal'
